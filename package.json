@@ -1,0 +1,22 @@
+{
+  "name": "blockchain-using-javascript",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/premjha456/blockchain-using-javascript.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/premjha456/blockchain-using-javascript/issues"
+  },
+  "homepage": "https://github.com/premjha456/blockchain-using-javascript#readme",
+  "dependencies": {
+    "sha256": "^0.2.0"
+  }
+}
