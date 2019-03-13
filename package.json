@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon dev/app.js"
   },
   "repository": {
     "type": "git",
@@ -17,6 +18,10 @@
   },
   "homepage": "https://github.com/premjha456/blockchain-using-javascript#readme",
   "dependencies": {
-    "sha256": "^0.2.0"
+    "body-parser": "^1.18.3",
+    "express": "^4.16.4",
+    "nodemon": "^1.18.10",
+    "sha256": "^0.2.0",
+    "uuid": "^3.3.2"
   }
 }
