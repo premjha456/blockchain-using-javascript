@@ -21,12 +21,41 @@ app.get('/blockchain',function(req,res){
 });
 
 
-//create a new transaction and add it to pendingTransaction list
+//add the broadcast transactions to the nodes individully
 app.post('/transaction',function(req,res){
-  const blockIndex= mycoin.createNewTransaction(req.body.amount,req.body.sender,req.body.recipient);
-  res.json({node:blockIndex });
+
+  const newTransaction = req.body;
+  const blockIndex= mycoin.addTransactionToPendingTransaction(newTransaction);
+  res.json({
+      note:`Transaction will be added in block ${blockIndex}`
+  });
 
 });
+
+//create a new transaction ,add it to pendingTransaction list and broadcast it to other nodes
+app.post('/transaction/broadcast' ,function(req,res){
+    const newTransaction = mycoin.createNewTransaction(req.body.amount,req.body.sender,req.body.recipient);
+    mycoin.addTransactionToPendingTransaction(newTransaction);
+    
+    const requestPromises =[];
+    mycoin.networkNodes.forEach(networkNodeUrl=>{
+         const requestOptions={
+          uri:networkNodeUrl+'/transaction',
+          method:'POST',
+          body:newTransaction,
+          json:true
+         };
+
+          requestPromises.push(rp(requestOptions));
+
+    });
+
+    Promise.all(requestPromises)
+     .then(data=>{
+         res.json({note:'Transaction Successful and broadcasted'});
+     });
+});
+
 
 // mine a new block
 app.get('/mine',function(req,res){
@@ -42,14 +71,68 @@ app.get('/mine',function(req,res){
 
    const blockHash = mycoin.hashBlock(previousBlockHash,currentBlockData,nonce);
 
-   mycoin.createNewTransaction(12.5,'00',nodeAddress);
-
    const newBlock=mycoin.createNewBlock(nonce,previousBlockHash,blockHash);
 
-   res.json({
-       "note":"New block mined successfully",
-       "block": newBlock
+   const requestPromises =[];
+
+   mycoin.networkNodes.forEach(networkNodeUrl=>{
+        
+        const requestOptions ={
+        uri:networkNodeUrl+'/recieve-new-block',
+        method:'POST',
+        body:{newBlock:newBlock},
+        json:true
+        };
+         requestPromises.push(rp(requestOptions));
    });
+    
+   Promise.all(requestPromises)
+   .then(data=>{
+       const requestOptions ={
+          uri:mycoin.currentNodeUrl +'/transaction/broadcast',
+          method:'POST',
+          body:{
+              amount: 12.5,
+              sender:'00',
+              recipient:nodeAddress
+          },
+          json:true
+       };
+
+       return rp(requestOptions);
+   })
+   .then(data=>{
+    res.json({
+        "note":"New block mined  and broadcasted successfully",
+        "block": newBlock
+    });
+
+   });
+   
+});
+
+
+app.post('/recieve-new-block',function(req,res){
+
+    const newBlock = req.body.newBlock;
+    const lastBlock = mycoin.getLastBlock();
+    const correctHash = lastBlock.hash === newBlock.previousBlockHash;
+    const correctIndex = lastBlock['index']+1 === newBlock['index'] ;
+
+    if(correctHash && correctIndex){
+      mycoin.chain.push(newBlock);
+      mycoin.pendingTransaction=[];
+      res.json({
+          'note':'New block mined and accepted',
+          'block':newBlock
+      });
+    }
+    else{
+        res.json({
+            'note':'New block rejected',
+            'block':newBlock
+        });
+    }
 });
 
 //register a node and broadcast it to network
@@ -77,7 +160,7 @@ Promise.all(regNodesPromises).then(data=>{
   const blukRegisterOptions={
       uri:newNodeUrl+'/register-nodes-bluk',
       method:'POST',
-      body:{allNetworkNodes:[...mycoin.networkNodes,mycoin.currentNodeUrl]},
+      body:{allNetworkNodes:[ ...mycoin.networkNodes,mycoin.currentNodeUrl]},
       json:true
   };
     return  rp(blukRegisterOptions);
@@ -109,10 +192,13 @@ app.post('/register-nodes-bluk',function(req,res){
      
      const nodeNotAlreadyPresent=mycoin.networkNodes.indexOf(networkNodeUrl)==-1;
     const notCurrentNode=mycoin.currentNodeUrl !== networkNodeUrl;
+    if(nodeNotAlreadyPresent && notCurrentNode){
+     mycoin.networkNodes.push(networkNodeUrl);
+    }
     });
 
     res.json({
-        note:'Bul registration successfully'
+        note:'Bulk registration successfully'
     })
 });
 
