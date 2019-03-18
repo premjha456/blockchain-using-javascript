@@ -202,6 +202,51 @@ app.post('/register-nodes-bluk',function(req,res){
     })
 });
 
+app.get('/consensus',function(req,res){
+    
+    const requestPromises=[];
+
+    mycoin.networkNodes.forEach(networkNodeUrl=>{
+     const requestOptions ={
+         uri:networkNodeUrl+'/blockchain',
+         method:'GET',
+         json:true
+     };
+      requestPromises.push(rp(requestOptions));
+    });
+
+    Promise.all(requestPromises)
+    .then(blockchains =>{
+       const currentChainLength = mycoin.chain.length;
+       let maxChainLength=null;
+       let newLongestChain = null;
+       let newPendingTransactions= null;
+
+       blockchains.forEach(blockchain=>{
+         if(blockchain.chain.length > maxChainLength){
+             maxChainLength=blockchain.chain.length;
+             newLongestChain=blockchain.chain;
+             newPendingTransactions = blockchain.pendingTransaction;
+         };
+
+       });
+        if(!newLongestChain || (newLongestChain && !mycoin.chainIsValid(newLongestChain))){
+            res.json({
+                note:'Current chain has not been replaced',
+                chain:mycoin.chain
+            });
+        }
+        else if(newLongestChain && mycoin.chainIsValid(newLongestChain)){
+
+            mycoin.chain = newLongestChain;
+            mycoin.pendingTransaction = newPendingTransactions; 
+            res.json({
+                note:'Current chain has been replaced',
+                chain:mycoin.chain
+            });
+        }
+    });
+});
 
 app.listen(port,function(){
     console.log(`Server running on port ${port}`);

@@ -10,7 +10,7 @@ function Blockchain(){
     this.currentNodeUrl=currentNodeUrl;
 
     this.networkNodes=[];
-    this.createNewBlock(1,'0','0');
+    this.createNewBlock(100,'0','0');
 }
 
 Blockchain.prototype.createNewBlock=function(nonce,previousBlockHash,hash){
@@ -78,4 +78,40 @@ Blockchain.prototype.proofOfWork=function(previousBlockHash,currentBlockData){
 
     return nonce;
 }
-module.exports = Blockchain;
+
+
+Blockchain.prototype.chainIsValid = function(blockchain){
+    
+    let validChain = true;
+
+    for(var i=1;i<blockchain.length;i++){
+    const currentBlock = blockchain[i];
+    const previousBlock = blockchain[i-1];
+    const blockHash = this.hashBlock(previousBlock['hash'],{transactions:currentBlock['transactions'],index:currentBlock['index']},currentBlock['nonce']);
+    if(blockHash.substring(0,4,) !== '0000')  {
+        validChain = false;
+    }  
+
+    if(currentBlock['previousBlockHash']  !== previousBlock['hash']){
+        validChain = false;
+    }
+
+}
+
+const genesisBlock = blockchain[0];
+const correctNonce = genesisBlock['nonce'] ===100;
+const correctPreviousBlockhash = genesisBlock['previousBlockHash'] === '0';
+const correctHash = genesisBlock['hash'] === '0';
+const correctTransaction =genesisBlock['transactions'].length === 0;
+
+
+if(!correctNonce || !correctPreviousBlockhash|| !correctTransaction || !correctHash ){
+
+ validChain =false;
+}
+
+ return validChain;
+}
+
+ 
+module.exports = Blockchain;  
